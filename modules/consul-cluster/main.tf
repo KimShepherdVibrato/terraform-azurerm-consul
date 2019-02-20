@@ -6,67 +6,67 @@ terraform {
 # CREATE A LOAD BALANCER FOR TEST ACCESS (SHOULD BE DISABLED FOR PROD)
 #---------------------------------------------------------------------------------------------------------------------
 resource "azurerm_public_ip" "consul_access" {
-  count = "${var.associate_public_ip_address_load_balancer ? 1 : 0}"
-  name = "${var.cluster_name}_access"
-  location = "${var.location}"
-  resource_group_name = "${var.resource_group_name}"
+  count                        = "${var.associate_public_ip_address_load_balancer ? 1 : 0}"
+  name                         = "${var.cluster_name}_access"
+  location                     = "${var.location}"
+  resource_group_name          = "${var.resource_group_name}"
   public_ip_address_allocation = "static"
-  domain_name_label = "${var.cluster_name}"
+  domain_name_label            = "${var.cluster_name}"
 }
 
 resource "azurerm_lb" "consul_access" {
-  count = "${var.associate_public_ip_address_load_balancer ? 1 : 0}"
-  name = "${var.cluster_name}_access"
-  location = "${var.location}"
+  count               = "${var.associate_public_ip_address_load_balancer ? 1 : 0}"
+  name                = "${var.cluster_name}_access"
+  location            = "${var.location}"
   resource_group_name = "${var.resource_group_name}"
 
   frontend_ip_configuration {
-    name = "PublicIPAddress"
+    name                 = "PublicIPAddress"
     public_ip_address_id = "${azurerm_public_ip.consul_access.id}"
   }
 }
 
 resource "azurerm_lb_nat_pool" "consul_lbnatpool" {
-  count = "${var.associate_public_ip_address_load_balancer ? 1 : 0}"
-  resource_group_name = "${var.resource_group_name}"
-  name = "ssh"
-  loadbalancer_id = "${azurerm_lb.consul_access.id}"
-  protocol = "Tcp"
-  frontend_port_start = 2200
-  frontend_port_end = 2299
-  backend_port = 22
+  count                          = "${var.associate_public_ip_address_load_balancer ? 1 : 0}"
+  resource_group_name            = "${var.resource_group_name}"
+  name                           = "ssh"
+  loadbalancer_id                = "${azurerm_lb.consul_access.id}"
+  protocol                       = "Tcp"
+  frontend_port_start            = 2200
+  frontend_port_end              = 2299
+  backend_port                   = 22
   frontend_ip_configuration_name = "PublicIPAddress"
 }
 
 resource "azurerm_lb_nat_pool" "consul_lbnatpool_rpc" {
-  count = "${var.associate_public_ip_address_load_balancer ? 1 : 0}"
-  resource_group_name = "${var.resource_group_name}"
-  name = "rpc"
-  loadbalancer_id = "${azurerm_lb.consul_access.id}"
-  protocol = "Tcp"
-  frontend_port_start = 8300
-  frontend_port_end = 8399
-  backend_port = 8300
+  count                          = "${var.associate_public_ip_address_load_balancer ? 1 : 0}"
+  resource_group_name            = "${var.resource_group_name}"
+  name                           = "rpc"
+  loadbalancer_id                = "${azurerm_lb.consul_access.id}"
+  protocol                       = "Tcp"
+  frontend_port_start            = 8300
+  frontend_port_end              = 8399
+  backend_port                   = 8300
   frontend_ip_configuration_name = "PublicIPAddress"
 }
 
 resource "azurerm_lb_nat_pool" "consul_lbnatpool_http" {
-  count = "${var.associate_public_ip_address_load_balancer ? 1 : 0}"
-  resource_group_name = "${var.resource_group_name}"
-  name = "http"
-  loadbalancer_id = "${azurerm_lb.consul_access.id}"
-  protocol = "Tcp"
-  frontend_port_start = 8500
-  frontend_port_end = 8599
-  backend_port = 8500
+  count                          = "${var.associate_public_ip_address_load_balancer ? 1 : 0}"
+  resource_group_name            = "${var.resource_group_name}"
+  name                           = "http"
+  loadbalancer_id                = "${azurerm_lb.consul_access.id}"
+  protocol                       = "Tcp"
+  frontend_port_start            = 8500
+  frontend_port_end              = 8599
+  backend_port                   = 8500
   frontend_ip_configuration_name = "PublicIPAddress"
 }
 
 resource "azurerm_lb_backend_address_pool" "consul_bepool" {
-  count = "${var.associate_public_ip_address_load_balancer ? 1 : 0}"
+  count               = "${var.associate_public_ip_address_load_balancer ? 1 : 0}"
   resource_group_name = "${var.resource_group_name}"
-  loadbalancer_id = "${azurerm_lb.consul_access.id}"
-  name = "BackEndAddressPool"
+  loadbalancer_id     = "${azurerm_lb.consul_access.id}"
+  name                = "BackEndAddressPool"
 }
 
 #---------------------------------------------------------------------------------------------------------------------
@@ -74,43 +74,44 @@ resource "azurerm_lb_backend_address_pool" "consul_bepool" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "azurerm_virtual_machine_scale_set" "consul" {
-  count = "${var.associate_public_ip_address_load_balancer ? 0 : 1}"
-  name = "${var.cluster_name}"
-  location = "${var.location}"
+  count               = "${var.associate_public_ip_address_load_balancer ? 0 : 1}"
+  name                = "${var.cluster_name}"
+  location            = "${var.location}"
   resource_group_name = "${var.resource_group_name}"
   upgrade_policy_mode = "Manual"
 
   sku {
-    name = "${var.instance_size}"
-    tier = "${var.instance_tier}"
+    name     = "${var.instance_size}"
+    tier     = "${var.instance_tier}"
     capacity = "${var.cluster_size}"
   }
 
   os_profile {
     computer_name_prefix = "${var.computer_name_prefix}"
-    admin_username = "${var.admin_user_name}"
+    admin_username       = "${var.admin_user_name}"
 
     #This password is unimportant as it is disabled below in the os_profile_linux_config
     admin_password = "Passwword1234"
-    custom_data = "${var.custom_data}"
+    custom_data    = "${var.custom_data}"
   }
 
   os_profile_linux_config {
     disable_password_authentication = true
 
     ssh_keys {
-      path = "/home/${var.admin_user_name}/.ssh/authorized_keys"
+      path     = "/home/${var.admin_user_name}/.ssh/authorized_keys"
       key_data = "${var.key_data}"
     }
   }
 
   network_profile {
-    name = "ConsulNetworkProfile"
+    name    = "ConsulNetworkProfile"
     primary = true
 
     ip_configuration {
-      name = "ConsulIPConfiguration"
+      name      = "ConsulIPConfiguration"
       subnet_id = "${var.subnet_id}"
+      primary   = true
     }
   }
 
@@ -119,10 +120,10 @@ resource "azurerm_virtual_machine_scale_set" "consul" {
   }
 
   storage_profile_os_disk {
-    name = ""
-    caching = "ReadWrite"
-    create_option = "FromImage"
-    os_type = "Linux"
+    name              = ""
+    caching           = "ReadWrite"
+    create_option     = "FromImage"
+    os_type           = "Linux"
     managed_disk_type = "Standard_LRS"
   }
 
@@ -136,45 +137,49 @@ resource "azurerm_virtual_machine_scale_set" "consul" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "azurerm_virtual_machine_scale_set" "consul_with_load_balancer" {
-  count = "${var.associate_public_ip_address_load_balancer ? 1 : 0}"
-  name = "${var.cluster_name}"
-  location = "${var.location}"
+  count               = "${var.associate_public_ip_address_load_balancer ? 1 : 0}"
+  name                = "${var.cluster_name}"
+  location            = "${var.location}"
   resource_group_name = "${var.resource_group_name}"
   upgrade_policy_mode = "Manual"
 
   sku {
-    name = "${var.instance_size}"
-    tier = "${var.instance_tier}"
+    name     = "${var.instance_size}"
+    tier     = "${var.instance_tier}"
     capacity = "${var.cluster_size}"
   }
 
   os_profile {
     computer_name_prefix = "${var.computer_name_prefix}"
-    admin_username = "${var.admin_user_name}"
+    admin_username       = "${var.admin_user_name}"
 
     #This password is unimportant as it is disabled below in the os_profile_linux_config
     admin_password = "Passwword1234"
-    custom_data = "${var.custom_data}"
+    custom_data    = "${var.custom_data}"
   }
 
   os_profile_linux_config {
     disable_password_authentication = true
 
     ssh_keys {
-      path = "/home/${var.admin_user_name}/.ssh/authorized_keys"
+      path     = "/home/${var.admin_user_name}/.ssh/authorized_keys"
       key_data = "${var.key_data}"
     }
   }
 
   network_profile {
-    name = "ConsulNetworkProfile"
+    name    = "ConsulNetworkProfile"
     primary = true
 
     ip_configuration {
-      name = "ConsulIPConfiguration"
+      name      = "ConsulIPConfiguration"
       subnet_id = "${var.subnet_id}"
+      primary   = true
+
       load_balancer_backend_address_pool_ids = [
-        "${azurerm_lb_backend_address_pool.consul_bepool.id}"]
+        "${azurerm_lb_backend_address_pool.consul_bepool.id}",
+      ]
+
       load_balancer_inbound_nat_rules_ids = ["${element(azurerm_lb_nat_pool.consul_lbnatpool.*.id, count.index)}"]
     }
   }
@@ -184,10 +189,10 @@ resource "azurerm_virtual_machine_scale_set" "consul_with_load_balancer" {
   }
 
   storage_profile_os_disk {
-    name = ""
-    caching = "ReadWrite"
-    create_option = "FromImage"
-    os_type = "Linux"
+    name              = ""
+    caching           = "ReadWrite"
+    create_option     = "FromImage"
+    os_type           = "Linux"
     managed_disk_type = "Standard_LRS"
   }
 
@@ -201,25 +206,25 @@ resource "azurerm_virtual_machine_scale_set" "consul_with_load_balancer" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "azurerm_network_security_group" "consul" {
-  name = "${var.cluster_name}"
-  location = "${var.location}"
+  name                = "${var.cluster_name}"
+  location            = "${var.location}"
   resource_group_name = "${var.resource_group_name}"
 }
 
 resource "azurerm_network_security_rule" "ssh" {
   count = "${length(var.allowed_ssh_cidr_blocks)}"
 
-  access = "Allow"
-  destination_address_prefix = "*"
-  destination_port_range = "22"
-  direction = "Inbound"
-  name = "SSH${count.index}"
+  access                      = "Allow"
+  destination_address_prefix  = "*"
+  destination_port_range      = "22"
+  direction                   = "Inbound"
+  name                        = "SSH${count.index}"
   network_security_group_name = "${azurerm_network_security_group.consul.name}"
-  priority = "${100 + count.index}"
-  protocol = "Tcp"
-  resource_group_name = "${var.resource_group_name}"
-  source_address_prefix = "${element(var.allowed_ssh_cidr_blocks, count.index)}"
-  source_port_range = "1024-65535"
+  priority                    = "${100 + count.index}"
+  protocol                    = "Tcp"
+  resource_group_name         = "${var.resource_group_name}"
+  source_address_prefix       = "${element(var.allowed_ssh_cidr_blocks, count.index)}"
+  source_port_range           = "1024-65535"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -229,8 +234,8 @@ resource "azurerm_network_security_rule" "ssh" {
 module "security_group_rules" {
   source = "../consul-security-group-rules"
 
-  security_group_name = "${azurerm_network_security_group.consul.name}"
-  resource_group_name = "${var.resource_group_name}"
+  security_group_name         = "${azurerm_network_security_group.consul.name}"
+  resource_group_name         = "${var.resource_group_name}"
   allowed_inbound_cidr_blocks = ["${var.allowed_inbound_cidr_blocks}"]
 
   server_rpc_port = "${var.server_rpc_port}"
