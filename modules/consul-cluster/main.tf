@@ -6,12 +6,12 @@ terraform {
 # CREATE A LOAD BALANCER FOR TEST ACCESS (SHOULD BE DISABLED FOR PROD)
 #---------------------------------------------------------------------------------------------------------------------
 resource "azurerm_public_ip" "consul_access" {
-  count                        = "${var.associate_public_ip_address_load_balancer ? 1 : 0}"
-  name                         = "${var.cluster_name}_access"
-  location                     = "${var.location}"
-  resource_group_name          = "${var.resource_group_name}"
-  public_ip_address_allocation = "static"
-  domain_name_label            = "${var.cluster_name}"
+  count               = "${var.associate_public_ip_address_load_balancer ? 1 : 0}"
+  name                = "${var.cluster_name}_access"
+  location            = "${var.location}"
+  resource_group_name = "${var.resource_group_name}"
+  allocation_method   = "static"
+  domain_name_label   = "${var.cluster_name}"
 }
 
 resource "azurerm_lb" "consul_access" {
