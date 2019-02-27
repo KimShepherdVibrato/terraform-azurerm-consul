@@ -1,5 +1,5 @@
 output "scale_set_name" {
-  value = "${element(concat(azurerm_virtual_machine_scale_set.consul_with_load_balancer.*.name, azurerm_virtual_machine_scale_set.consul.*.name), 0)}"
+  value = "${var.cluster_name}"
 }
 
 output "cluster_size" {
